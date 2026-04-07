@@ -26,7 +26,6 @@ export function makeBrowserServerState(params?: {
 }): BrowserServerState {
   const profile = params?.profile ?? makeBrowserProfile();
   return {
-    // oxlint-disable-next-line typescript/no-explicit-any
     server: null as any,
     port: 0,
     resolved: {
@@ -38,8 +37,8 @@ export function makeBrowserServerState(params?: {
       cdpPortRangeStart: 18800,
       cdpPortRangeEnd: 18810,
       evaluateEnabled: false,
-      remoteCdpTimeoutMs: 1500,
-      remoteCdpHandshakeTimeoutMs: 3000,
+      remoteCdpTimeoutMs: 5000,
+      remoteCdpHandshakeTimeoutMs: 10_000,
       extraArgs: [],
       color: profile.color,
       headless: true,

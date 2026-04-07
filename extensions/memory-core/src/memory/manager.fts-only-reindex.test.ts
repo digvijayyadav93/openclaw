@@ -4,8 +4,9 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MemoryIndexManager } from "./manager.js";
 import "./test-runtime-mocks.js";
+import type { MemoryIndexManager } from "./manager.js";
+import { closeAllMemorySearchManagers, getMemorySearchManager } from "./search-manager.js";
 
 vi.mock("./embeddings.js", () => ({
   createEmbeddingProvider: async () => ({
@@ -16,24 +17,25 @@ vi.mock("./embeddings.js", () => ({
   resolveEmbeddingProviderFallbackModel: () => "fts-only",
 }));
 
-type MemoryIndexModule = typeof import("./index.js");
-
 describe("memory manager FTS-only reindex", () => {
   let fixtureRoot = "";
   let caseId = 0;
   let workspaceDir = "";
   let indexPath = "";
   let manager: MemoryIndexManager | null = null;
-  let getMemorySearchManager: MemoryIndexModule["getMemorySearchManager"];
-  let closeAllMemorySearchManagers: MemoryIndexModule["closeAllMemorySearchManagers"];
-
+  let getMemorySearchManagerForTest: typeof getMemorySearchManager = getMemorySearchManager;
+  let closeAllMemorySearchManagersForTest: typeof closeAllMemorySearchManagers =
+    closeAllMemorySearchManagers;
   beforeAll(async () => {
+    vi.resetModules();
+    ({
+      getMemorySearchManager: getMemorySearchManagerForTest,
+      closeAllMemorySearchManagers: closeAllMemorySearchManagersForTest,
+    } = await import("./index.js"));
     fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mem-fts-only-"));
   });
 
   beforeEach(async () => {
-    vi.resetModules();
-    ({ getMemorySearchManager, closeAllMemorySearchManagers } = await import("./index.js"));
     workspaceDir = path.join(fixtureRoot, `case-${caseId++}`);
     await fs.mkdir(path.join(workspaceDir, "memory"), { recursive: true });
     await fs.writeFile(path.join(workspaceDir, "MEMORY.md"), "Alpha topic\n\nKeep this note.");
@@ -45,14 +47,16 @@ describe("memory manager FTS-only reindex", () => {
       await manager.close();
       manager = null;
     }
-    await closeAllMemorySearchManagers();
+    await closeAllMemorySearchManagersForTest();
   });
 
   afterAll(async () => {
     if (!fixtureRoot) {
+      vi.resetModules();
       return;
     }
     await fs.rm(fixtureRoot, { recursive: true, force: true });
+    vi.resetModules();
   });
 
   async function createManager(): Promise<MemoryIndexManager> {
@@ -74,7 +78,7 @@ describe("memory manager FTS-only reindex", () => {
         list: [{ id: "main", default: true }],
       },
     } as OpenClawConfig;
-    const result = await getMemorySearchManager({ cfg, agentId: "main" });
+    const result = await getMemorySearchManagerForTest({ cfg, agentId: "main" });
     if (!result.manager) {
       throw new Error(result.error ?? "manager missing");
     }

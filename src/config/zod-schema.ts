@@ -41,6 +41,16 @@ const NodeHostSchema = z
   .strict()
   .optional();
 
+const ClawConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    maxActiveMissions: z.number().int().positive().optional(),
+    loopMs: z.number().int().positive().optional(),
+    autonomyDefault: z.boolean().optional(),
+  })
+  .strict()
+  .optional();
+
 const MemoryQmdPathSchema = z
   .object({
     path: z.string(),
@@ -169,10 +179,6 @@ const PluginEntrySchema = z
 
 const TalkProviderEntrySchema = z
   .object({
-    voiceId: z.string().optional(),
-    voiceAliases: z.record(z.string(), z.string()).optional(),
-    modelId: z.string().optional(),
-    outputFormat: z.string().optional(),
     apiKey: SecretInputSchema.optional().register(sensitive),
   })
   .catchall(z.unknown());
@@ -408,6 +414,7 @@ export const OpenClawSchema = z
       })
       .strict()
       .optional(),
+    claw: ClawConfigSchema,
     ui: z
       .object({
         seamColor: HexColorSchema.optional(),
